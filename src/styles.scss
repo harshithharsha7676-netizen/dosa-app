@@ -1,0 +1,48 @@
+/* Global styles */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  background: #F5F5F5;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Default: center the client app like a phone */
+body {
+  display: flex;
+  justify-content: center;
+  min-height: 100dvh;
+}
+
+app-root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100dvh;
+  background: #FFFFFF;
+  position: relative;
+}
+
+/* Admin override: full-width, no phone constraint */
+body.admin-mode {
+  background: #0A0A0A;
+  display: block;
+}
+
+body.admin-mode app-root {
+  max-width: 100% !important;
+  width: 100% !important;
+  background: #0A0A0A;
+}
+
+/* Remove tap highlight on mobile */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Smooth scrolling */
+html { scroll-behavior: smooth; }
+
+/* Kannada script rendering */
+.kn, [lang="kn"] {
+  font-family: 'Noto Sans Kannada', sans-serif;
+}

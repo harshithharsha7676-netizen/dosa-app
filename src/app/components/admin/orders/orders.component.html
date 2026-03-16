@@ -1,0 +1,231 @@
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="pg-hdr">
+    <div class="pg-hdr-info">
+      <h1>Orders</h1>
+      <p>Live · Auto-refresh 30s · Last: {{ formatRefresh() }}</p>
+    </div>
+    <div class="pg-hdr-actions">
+      <a href="/" class="btn-back"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Main Menu</a>
+      <button class="btn-ref" (click)="load()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- ── TABS ── -->
+  <div class="tabs">
+    <button class="tab" [class.tab-on]="activeView==='today'" (click)="switchView('today')">
+      🕐 Today
+      <span class="tab-cnt" [class.tab-cnt-live]="activeView==='today'">{{ todayOrders.length }}</span>
+    </button>
+    <button class="tab" [class.tab-on]="activeView==='history'" (click)="switchView('history')">
+      📅 History
+      <span class="tab-cnt">{{ historyOrders.length }}</span>
+    </button>
+  </div>
+
+  <!-- ── STATS BAR ── -->
+  <div class="sbar" *ngIf="!loading">
+    <div class="sb sb-all" [class.sb-on]="activePaidFilter==='ALL'" (click)="applyPaidFilter('ALL')">
+      <div class="sb-n">{{ sourceOrders.length }}</div>
+      <div class="sb-l">All <span class="ck" *ngIf="activePaidFilter==='ALL'">✓</span></div>
+    </div>
+    <div class="sb sb-paid" [class.sb-on]="activePaidFilter==='PAID'"
+         (click)="activePaidFilter==='PAID' ? applyPaidFilter('ALL') : applyPaidFilter('PAID')">
+      <div class="sb-n">{{ paidCount }}</div>
+      <div class="sb-l">Paid <span class="ck" *ngIf="activePaidFilter==='PAID'">✓</span></div>
+    </div>
+    <div class="sb sb-unpaid" [class.sb-on]="activePaidFilter==='UNPAID'"
+         (click)="activePaidFilter==='UNPAID' ? applyPaidFilter('ALL') : applyPaidFilter('UNPAID')">
+      <div class="sb-n">{{ unpaidCount }}</div>
+      <div class="sb-l">Unpaid <span class="ck" *ngIf="activePaidFilter==='UNPAID'">✓</span></div>
+    </div>
+    <div class="sb sb-items">
+      <div class="sb-n sb-items-n">{{ filteredItemCount }}</div>
+      <div class="sb-l">Items</div>
+    </div>
+    <!-- Revenue: includes cancelled if CANCELLED filter active -->
+    <div class="sb sb-rev sb-eye" (click)="hideRevenue=!hideRevenue" title="Click to show/hide">
+      <div class="sb-eye-row">
+        <div class="sb-n sb-rev-n">{{ hideRevenue ? '••••' : ('₹'+filteredRevenue) }}</div>
+        <span class="eye-ico">{{ hideRevenue ? '👁️' : '🙈' }}</span>
+      </div>
+      <div class="sb-l">Revenue (filtered)</div>
+    </div>
+    <!-- Today total: always excludes cancelled -->
+    <div class="sb sb-today sb-eye" *ngIf="activeView==='today'" (click)="hideTodayTotal=!hideTodayTotal" title="Click to show/hide">
+      <div class="sb-eye-row">
+        <div class="sb-n sb-today-n">{{ hideTodayTotal ? '••••' : ('₹'+todayRevenue) }}</div>
+        <span class="eye-ico">{{ hideTodayTotal ? '👁️' : '🙈' }}</span>
+      </div>
+      <div class="sb-l">Today's Net</div>
+    </div>
+  </div>
+
+  <!-- ── SEARCH ── -->
+  <div class="srch">
+    <span class="srch-ico">🔍</span>
+    <input class="srch-inp" [(ngModel)]="searchQuery" (ngModelChange)="applyFilters()"
+           placeholder="#order · name · phone · item · date…"/>
+    <button *ngIf="searchQuery" class="srch-clr" (click)="searchQuery='';applyFilters()">✕</button>
+  </div>
+
+  <!-- ── STATUS CHIPS ── -->
+  <div class="flt-row">
+    <span class="flt-lbl">Status</span>
+    <div class="chips">
+      <button *ngFor="let f of filters" class="chip" [class.chip-on]="activeFilter===f" (click)="applyFilter(f)">
+        {{ f }}<span *ngIf="f!=='ALL'" class="chip-cnt">{{ sourceOrders | orderCount: f }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── META ROW ── -->
+  <div class="meta-row" *ngIf="!loading">
+    <span class="meta-txt">Showing <strong>{{ filteredOrders.length }}</strong> / {{ sourceOrders.length }}
+      <span class="meta-tag" *ngIf="hasActiveFilter">filtered</span>
+    </span>
+    <button *ngIf="hasActiveFilter" class="meta-clr" (click)="clearAllFilters()">✕ Clear all</button>
+  </div>
+
+  <!-- ── LOADING ── -->
+  <div *ngIf="loading" class="empty-state">
+    <div class="spinner"></div><p>Loading orders…</p>
+  </div>
+
+  <!-- ── EMPTY ── -->
+  <div *ngIf="!loading && filteredOrders.length===0" class="empty-state">
+    <div style="font-size:2.2rem;margin-bottom:10px">📭</div>
+    <p>No orders found</p>
+    <button *ngIf="hasActiveFilter" class="btn-clr" (click)="clearAllFilters()">Clear filters</button>
+  </div>
+
+  <!-- ── ORDER CARDS ── -->
+  <div class="cards" *ngIf="!loading && filteredOrders.length>0">
+
+    <div *ngFor="let order of filteredOrders; let i=index"
+         class="card"
+         [class.card-paid]="order.paid"
+         [class.card-unpaid]="!order.paid"
+         [class.card-ready]="order.status==='READY'"
+         [class.card-cancelled]="order.status==='CANCELLED'"
+         [style.animation-delay.ms]="i*16">
+
+      <!-- ══ CARD TOP ══ -->
+      <div class="card-top">
+        <div class="ct-left">
+          <!-- Order # row -->
+          <div class="id-row">
+            <span class="ord-num">#{{ order.dailyOrderNumber || order.id }}</span>
+            <span class="badge" [ngClass]="'b-'+statusClass(order.status)">{{ order.status }}</span>
+            <span class="pay-y" *ngIf="order.paid">💚 PAID</span>
+            <span class="pay-n" *ngIf="!order.paid">🔴 UNPAID</span>
+          </div>
+
+          <!-- ★ CUSTOMER INFO — highlighted ★ -->
+          <div class="cust-row">
+            <span class="cust-name" *ngIf="order.customerName">{{ order.customerName }}</span>
+            <span class="cust-phone" *ngIf="order.customerPhone">📞&nbsp;{{ order.customerPhone }}</span>
+            <span class="cust-table" *ngIf="order.tableNumber">🪑&nbsp;Table {{ order.tableNumber }}</span>
+          </div>
+
+          <div class="ord-time">🕐 {{ activeView==='today' ? formatTime(order.createdAt) : formatDate(order.createdAt) }}</div>
+
+          <!-- ★ SPECIAL INSTRUCTIONS ★ -->
+          <div class="notes-pill" *ngIf="order.notes">
+            <span>📝</span><span class="notes-txt">{{ order.notes }}</span>
+          </div>
+        </div>
+
+        <div class="ct-right">
+          <select class="sel" [value]="order.status" (change)="updateStatus(order,$event)">
+            <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+          </select>
+          <button class="pay-btn" [class.pay-btn-y]="order.paid" [class.pay-btn-n]="!order.paid" (click)="togglePaid(order)">
+            {{ order.paid ? '💚 Paid' : '🔴 Mark Paid' }}
+          </button>
+        </div>
+      </div>
+
+<!-- ★ ORDER SUMMARY STRIP ★ -->
+      <div class="order-summary">
+        <div class="os-left">
+          <span class="os-total-qty">{{ totalQty(order) }}</span>
+          <span class="os-items-lbl">item{{ totalQty(order)!==1?'s':'' }}</span>
+          <span class="os-divider" *ngIf="hasParcel(order)||hasDineIn(order)"></span>
+          <span class="os-chip os-chip-p" *ngIf="hasParcel(order)">{{ parcelQty(order) }} Parcel</span>
+          <span class="os-chip os-chip-d" *ngIf="hasDineIn(order)">{{ dineInQty(order) }} Dine-In</span>
+        </div>
+        <div class="os-right">
+          <span class="os-total-lbl">Total</span>
+          <span class="os-total-amt">₹{{ n(order.totalAmount) }}</span>
+        </div>
+      </div>
+
+      <!-- ══ ITEMS — PARCEL FIRST ══ -->
+      <ng-container *ngIf="parcelFirst">
+        <ng-container *ngTemplateOutlet="parcelBlock; context:{order:order}"></ng-container>
+        <ng-container *ngTemplateOutlet="dineinBlock; context:{order:order}"></ng-container>
+      </ng-container>
+
+      <!-- ══ ITEMS — DINE-IN FIRST ══ -->
+      <ng-container *ngIf="!parcelFirst">
+        <ng-container *ngTemplateOutlet="dineinBlock; context:{order:order}"></ng-container>
+        <ng-container *ngTemplateOutlet="parcelBlock; context:{order:order}"></ng-container>
+      </ng-container>
+
+      <!-- CARD FOOTER -->
+      <div class="card-footer">
+        <span class="cf-items">{{ order.totalItems }} item(s)</span>
+        <span class="cf-grand">₹{{ n(order.totalAmount) }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ PARCEL BLOCK TEMPLATE ══ -->
+<ng-template #parcelBlock let-order="order">
+  <div class="sec parcel-sec" *ngIf="hasParcel(order)">
+    <div class="sec-hdr parcel-hdr">
+      <span>📦 PARCEL</span>
+      <span class="sec-meta">{{ parcelItems(order).length }} dish · {{ parcelQty(order) }} qty</span>
+      <span class="sec-sub">₹{{ parcelSubtotal(order) }}</span>
+    </div>
+    <div class="sec-body">
+      <div *ngFor="let oi of parcelItems(order); let idx=index"
+           class="ir" [class.ir-alt]="idx%2===1">
+        <span class="ir-sn">{{ idx+1 }}</span>
+        <span class="ir-name">{{ oi.itemName || oi.menuItem?.name || '—' }}</span>
+        <span class="ir-qty"><span class="ir-x">×</span>{{ oi.quantity }}</span>
+        <span class="ir-amt">₹{{ n(oi.unitPrice)*oi.quantity }}</span>
+      </div>
+      <div class="ir ir-charge" *ngIf="n(order.parcelCharges)>0">
+        <span class="ir-sn">+</span>
+        <span class="ir-name ir-charge-lbl">Parcel charges</span>
+        <span class="ir-qty"></span>
+        <span class="ir-charge-amt">₹{{ n(order.parcelCharges) }}</span>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+<!-- ══ DINE-IN BLOCK TEMPLATE ══ -->
+<ng-template #dineinBlock let-order="order">
+  <div class="sec dinein-sec" *ngIf="hasDineIn(order)">
+    <div class="sec-hdr dinein-hdr">
+      <span>🪑 DINE-IN</span>
+      <span class="sec-meta">{{ dineInItems(order).length }} dish · {{ dineInQty(order) }} qty</span>
+      <span class="sec-sub">₹{{ dineInSubtotal(order) }}</span>
+    </div>
+    <div class="sec-body">
+      <div *ngFor="let oi of dineInItems(order); let idx=index"
+           class="ir" [class.ir-alt]="idx%2===1">
+        <span class="ir-sn">{{ idx+1 }}</span>
+        <span class="ir-name">{{ oi.itemName || oi.menuItem?.name || '—' }}</span>
+        <span class="ir-qty"><span class="ir-x">×</span>{{ oi.quantity }}</span>
+        <span class="ir-amt">₹{{ n(oi.unitPrice)*oi.quantity }}</span>
+      </div>
+    </div>
+  </div>
+</ng-template>

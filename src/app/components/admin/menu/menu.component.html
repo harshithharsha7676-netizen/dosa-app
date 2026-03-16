@@ -1,0 +1,205 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1>Menu Items</h1>
+      <p>Manage your dosa varieties and categories</p>
+    </div>
+    <div class="header-actions">
+      <a href="/" class="main-menu-btn">🏠 Main Menu</a>
+      <button class="btn-primary" (click)="openAdd()">+ Add Item</button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-toolbar">
+      <input class="search-input"
+             [(ngModel)]="searchQuery"
+             (ngModelChange)="applySearch()"
+             placeholder="🔍 Search items or categories...">
+      <span class="count">{{ filtered.length }} items</span>
+    </div>
+
+    <div *ngIf="loading" class="spinner-wrap">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <table *ngIf="!loading">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Price</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of filtered">
+          <td>
+            <div class="thumb">
+              <img *ngIf="item.imageUrl" [src]="imageUrl(item.imageUrl)" [alt]="item.name"
+                   class="thumb-img"
+                   (error)="$any($event.target).classList.add('img-err')">
+              <span class="no-img">🍛</span>
+            </div>
+          </td>
+          <td>
+            <div class="item-name">{{ item.name }}</div>
+            <div *ngIf="item.description" class="item-desc">{{ item.description }}</div>
+          </td>
+          <td>
+            <span *ngIf="item.category" class="badge badge-blue">{{ item.category }}</span>
+            <span *ngIf="!item.category" class="muted">—</span>
+          </td>
+          <td class="price-cell">₹{{ asNumber(item.price) }}</td>
+          <td>
+            <label class="toggle-sw-admin">
+              <input type="checkbox" [checked]="item.available" (change)="toggle(item)">
+              <span class="toggle-track-admin" [class.tog-on]="item.available" [class.tog-off]="!item.available">
+                <span class="tog-label">{{item.available ? 'ON' : 'OFF'}}</span>
+              </span>
+            </label>
+          </td>
+          <td>
+            <button class="btn-sm btn-edit" (click)="openEdit(item)">✏️ Edit</button>
+            <button class="btn-sm btn-delete" (click)="delete(item)" *ngIf="!isProtected(item.category)">🗑️ Delete</button>
+            <span class="protected-tag" *ngIf="isProtected(item.category)" title="Core item – cannot be deleted">🔒 Core</span>
+          </td>
+        </tr>
+        <tr *ngIf="filtered.length === 0">
+          <td colspan="6" class="no-data">No items found</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Mobile card view (CSS hides table on small screens, shows this) -->
+    <div class="mobile-cards" *ngIf="!loading">
+      <div *ngFor="let item of filtered" class="menu-card">
+        <div class="menu-card-thumb">
+          <img *ngIf="item.imageUrl" [src]="imageUrl(item.imageUrl)" [alt]="item.name"
+               (error)="$any($event.target).style.display='none'">
+          <span *ngIf="!item.imageUrl">🍛</span>
+        </div>
+        <div class="menu-card-info">
+          <div class="menu-card-name">{{ item.name }}</div>
+          <div class="menu-card-cat" *ngIf="item.category">{{ item.category }}</div>
+          <div class="menu-card-price">₹{{ asNumber(item.price) }}</div>
+        </div>
+        <div class="menu-card-right">
+          <label class="toggle-sw-admin">
+            <input type="checkbox" [checked]="item.available" (change)="toggle(item)">
+            <span class="toggle-track-admin" [class.tog-on]="item.available" [class.tog-off]="!item.available">
+              <span class="tog-label">{{item.available ? 'ON' : 'OFF'}}</span>
+            </span>
+          </label>
+          <div class="menu-card-actions">
+            <button class="btn-sm btn-edit" (click)="openEdit(item)">✏️</button>
+            <button class="btn-sm btn-delete" (click)="delete(item)" *ngIf="!isProtected(item.category)">🗑️</button>
+            <span class="protected-tag" *ngIf="isProtected(item.category)">🔒</span>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="filtered.length === 0" class="no-data" style="padding:30px;text-align:center">No items found</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Add / Edit Modal ──────────────────────────────────── -->
+<div class="modal-overlay" [class.open]="modalOpen" (click)="showCatDropdown=false">
+  <div class="modal-box" (click)="$event.stopPropagation()">
+
+    <div class="modal-title">
+      <span>{{ editingId ? '✏️ Edit' : '➕ Add' }} Menu Item</span>
+      <button class="modal-close" (click)="closeModal()">✕</button>
+    </div>
+
+    <div class="modal-body">
+    <div class="form-grid">
+
+      <!-- Name -->
+      <div class="full">
+        <label class="form-label">Item Name *</label>
+        <input class="form-input" [(ngModel)]="form.name" placeholder="e.g. Special Pizza Dosa">
+      </div>
+
+      <!-- Price -->
+      <div>
+        <label class="form-label">Price (₹) *</label>
+        <input class="form-input" type="number" min="1" [(ngModel)]="form.price" placeholder="150">
+      </div>
+
+      <!-- Category — free type with autocomplete -->
+      <div class="cat-field-wrap">
+        <label class="form-label">Category <span class="hint-text">(type freely or pick)</span></label>
+        <div class="cat-input-wrap" (click)="$event.stopPropagation()">
+          <input class="form-input"
+                 [(ngModel)]="categoryInput"
+                 (input)="onCatInput()"
+                 (focus)="onCatInput()"
+                 placeholder="e.g. Beverages, Special Dosa…"
+                 autocomplete="off">
+          <div class="cat-dropdown" *ngIf="showCatDropdown">
+            <div class="cat-option" *ngFor="let c of filteredCatOptions" (click)="selectCat(c)">{{ c }}</div>
+          </div>
+        </div>
+        <div class="cat-chips" *ngIf="categories.length > 0">
+          <ng-container *ngFor="let c of categories">
+            <span *ngIf="!editingId && !isProtected(c)" class="cat-chip" (click)="selectCat(c)">{{ c }}</span>
+            <span *ngIf="editingId" class="cat-chip" (click)="selectCat(c)">{{ c }}</span>
+          </ng-container>
+        </div>
+        <div class="protected-note" *ngIf="!editingId">
+          <span class="muted" style="font-size:.68rem">🔒 Butter/Schezwan/Cheese Dosa are protected — items can only be added to them from Settings</span>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="full">
+        <label class="form-label">Description</label>
+        <input class="form-input" [(ngModel)]="form.description" placeholder="Short description (optional)">
+      </div>
+
+      <!-- Image upload -->
+      <div class="full">
+        <label class="form-label">Item Image</label>
+        <div class="image-upload-area">
+          <!-- Preview -->
+          <div class="img-preview-wrap" *ngIf="imagePreview">
+            <img [src]="imagePreview" class="upload-preview" alt="Preview">
+            <button class="remove-img-btn" (click)="removeImage()" title="Remove image">✕</button>
+          </div>
+          <!-- Upload placeholder -->
+          <div class="upload-placeholder" *ngIf="!imagePreview" (click)="imgInput.click()">
+            <input #imgInput type="file" accept="image/*" (change)="onImageSelect($event)" hidden>
+            <div class="upload-ico">📷</div>
+            <p>Click to upload image</p>
+            <span class="upload-hint">JPG, PNG, WebP — max 5MB</span>
+          </div>
+          <!-- Change image button when preview exists -->
+          <button class="change-img-btn" *ngIf="imagePreview" (click)="imgInput2.click()">
+            <input #imgInput2 type="file" accept="image/*" (change)="onImageSelect($event)" hidden>
+            🔄 Change Image
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /form-grid -->
+    </div><!-- /modal-body -->
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button class="btn-reset" (click)="resetItem()" *ngIf="editingId" title="Reset all fields and image">
+        🔄 Reset
+      </button>
+      <div class="footer-right">
+        <button class="btn-cancel" (click)="closeModal()">Cancel</button>
+        <button class="btn-primary" (click)="save()" [disabled]="saving">
+          {{ saving ? 'Saving...' : (editingId ? '💾 Update Item' : '➕ Add Item') }}
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>

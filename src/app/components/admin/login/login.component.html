@@ -1,0 +1,154 @@
+<div class="login-screen">
+
+  <!-- ── SIGN IN ── -->
+  <div class="login-card" *ngIf="view==='login'">
+    <div class="lc-brand">
+      <div class="lc-icon">🍛</div>
+      <div class="lc-god">ಶ್ರೀ ಕಬ್ಬಾಳಮ್ಮ</div>
+      <div class="lc-title">Famous 99 Variety Dosa</div>
+      <div class="lc-sub">Sign in to Admin Panel</div>
+    </div>
+
+    <div class="field">
+      <label>Username</label>
+      <div class="inp-wrap">
+        <span class="inp-ico">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </span>
+        <input type="text" [(ngModel)]="username" placeholder="Enter username" autocomplete="off" (keydown.enter)="login()">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="inp-wrap">
+        <span class="inp-ico">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <input [type]="showPassword ? 'text' : 'password'" [(ngModel)]="password" placeholder="e.g. @Pass123" autocomplete="new-password" (keydown.enter)="login()">
+        <button class="eye-btn" (click)="togglePassword()" type="button">
+          <svg *ngIf="!showPassword" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg *ngIf="showPassword" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="error" class="error-msg">{{ error }}</div>
+
+    <button class="login-btn" (click)="login()" [disabled]="loading">
+      <span *ngIf="!loading">Sign In</span>
+      <span *ngIf="loading" class="btn-loading"><span class="dot-spin"></span> Signing in…</span>
+    </button>
+
+    <div class="divider"><span>Account Recovery</span></div>
+    <button class="recovery-link" (click)="goForgot()">Forgot password?</button>
+  </div>
+
+  <!-- ── STEP 1: Enter phone ── -->
+  <div class="login-card" *ngIf="view==='forgot'">
+    <div class="lc-brand">
+      <div class="lc-icon step-icon">1</div>
+      <div class="lc-title">Account Recovery</div>
+      <div class="lc-sub">Enter the admin phone number to receive OTP</div>
+    </div>
+    <div class="step-bar">
+      <div class="step active">1</div><div class="step-line"></div>
+      <div class="step">2</div><div class="step-line"></div>
+      <div class="step">3</div>
+    </div>
+
+    <div class="field">
+      <label>Registered Phone Number</label>
+      <div class="inp-wrap">
+        <span class="inp-ico">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.78a16 16 0 0 0 6.29 6.29l.95-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </span>
+        <input type="tel" [(ngModel)]="fpPhone" placeholder="10-digit phone number" (keydown.enter)="sendOtp()">
+      </div>
+    </div>
+
+    <div *ngIf="fpError" class="error-msg">{{ fpError }}</div>
+
+    <button class="login-btn" (click)="sendOtp()" [disabled]="fpLoading">
+      <span *ngIf="!fpLoading">Send OTP via WhatsApp</span>
+      <span *ngIf="fpLoading" class="btn-loading"><span class="dot-spin"></span> Sending…</span>
+    </button>
+    <button class="back-btn" (click)="backToLogin()">← Back to Sign In</button>
+  </div>
+
+  <!-- ── STEP 2: Enter OTP ── -->
+  <div class="login-card" *ngIf="view==='otp'">
+    <div class="lc-brand">
+      <div class="lc-icon step-icon">2</div>
+      <div class="lc-title">Verify OTP</div>
+      <div class="lc-sub">Enter the 6-digit code sent to your WhatsApp</div>
+    </div>
+    <div class="step-bar">
+      <div class="step done">✓</div><div class="step-line active"></div>
+      <div class="step active">2</div><div class="step-line"></div>
+      <div class="step">3</div>
+    </div>
+
+    <div class="field">
+      <label>One-Time Password</label>
+      <div class="inp-wrap">
+        <span class="inp-ico">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <input type="tel" [(ngModel)]="fpOtp" placeholder="Enter 6-digit OTP" maxlength="6" (keydown.enter)="verifyOtp()" style="letter-spacing:3px;font-size:1.1rem;font-weight:700;">
+      </div>
+    </div>
+
+    <div *ngIf="fpError" class="error-msg">{{ fpError }}</div>
+
+    <button class="login-btn" (click)="verifyOtp()" [disabled]="fpLoading">
+      <span *ngIf="!fpLoading">Verify OTP</span>
+      <span *ngIf="fpLoading" class="btn-loading"><span class="dot-spin"></span> Verifying…</span>
+    </button>
+    <button class="back-btn" (click)="view='forgot'">← Back</button>
+  </div>
+
+  <!-- ── STEP 3: New password ── -->
+  <div class="login-card" *ngIf="view==='reset'">
+    <div class="lc-brand">
+      <div class="lc-icon step-icon">3</div>
+      <div class="lc-title">Set New Password</div>
+      <div class="lc-sub">OTP verified. Choose a strong new password.</div>
+    </div>
+    <div class="step-bar">
+      <div class="step done">✓</div><div class="step-line active"></div>
+      <div class="step done">✓</div><div class="step-line active"></div>
+      <div class="step active">3</div>
+    </div>
+
+    <div class="field">
+      <label>New Password</label>
+      <div class="inp-wrap">
+        <span class="inp-ico">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <input type="password" [(ngModel)]="fpNew" placeholder="e.g. @Pass123 (min 4 chars)" (keydown.enter)="saveNewPassword()">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Confirm Password</label>
+      <div class="inp-wrap">
+        <span class="inp-ico">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </span>
+        <input type="password" [(ngModel)]="fpConfirm" placeholder="Re-enter password" (keydown.enter)="saveNewPassword()">
+      </div>
+    </div>
+
+    <div *ngIf="fpError"   class="error-msg">{{ fpError }}</div>
+    <div *ngIf="fpSuccess" class="success-msg">{{ fpSuccess }}</div>
+
+    <button class="login-btn" (click)="saveNewPassword()" [disabled]="fpLoading">
+      <span *ngIf="!fpLoading">Save New Password</span>
+      <span *ngIf="fpLoading" class="btn-loading"><span class="dot-spin"></span> Saving…</span>
+    </button>
+    <button class="back-btn" (click)="backToLogin()">← Back to Sign In</button>
+  </div>
+
+</div>

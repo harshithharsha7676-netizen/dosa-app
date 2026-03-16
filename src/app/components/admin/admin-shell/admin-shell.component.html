@@ -1,0 +1,52 @@
+<div class="admin-layout">
+
+  <!-- Sidebar (desktop) / Bottom nav (mobile) -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🍛</div>
+      <div>
+        <h2>99 Variety Dosa</h2>
+        <p>Admin Dashboard</p>
+      </div>
+    </div>
+
+    <nav class="nav-items">
+      <a class="nav-item" routerLink="/admin/dashboard" routerLinkActive="active">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item" routerLink="/admin/menu" routerLinkActive="active">
+        <span class="nav-icon">🍽️</span>
+        <span>Menu</span>
+      </a>
+      <a class="nav-item" routerLink="/admin/orders" routerLinkActive="active">
+        <span class="nav-icon">📋</span>
+        <span>Orders</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <span class="user-avatar">👤</span>
+        <span class="user-name">{{ username }}</span>
+      </div>
+      <button class="logout-btn" (click)="logout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- Mobile top bar (hidden on desktop) -->
+  <div class="mobile-topbar">
+    <div class="mobile-brand">
+      <span>🍛</span>
+      <span class="mobile-brand-text">Admin Panel</span>
+    </div>
+    <div class="mobile-topbar-right">
+      <span class="mobile-user">{{ username }}</span>
+      <button class="mobile-logout" (click)="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <router-outlet />
+  </div>
+</div>

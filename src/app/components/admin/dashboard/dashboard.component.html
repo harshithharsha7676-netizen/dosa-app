@@ -1,0 +1,190 @@
+<div class="dash">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title">Dashboard <span class="topbar-pulse">📊</span></div>
+      <div class="topbar-sub">ಶ್ರೀ ಕಬ್ಬಾಳಮ್ಮ &nbsp;·&nbsp; Famous 99 Variety Dosa &nbsp;·&nbsp; {{ today }}</div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-pill"><span class="live-dot"></span>Live</div>
+      <a href="/" class="btn-menu"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Main Menu</a>
+      <button class="btn-ref" (click)="load()" title="Refresh">↻</button>
+    </div>
+  </div>
+
+  <!-- LOADING BAR -->
+  <div class="load-bar" *ngIf="loading"><div class="load-fill"></div></div>
+
+  <!-- STATS GRID -->
+  <div class="sg" *ngIf="stats">
+
+    <!-- Today's Orders -->
+    <div class="sc sc-orange">
+      <div class="sc-icon">📦</div>
+      <div class="sc-body">
+        <div class="sc-n">{{ todayOrders.length }}</div>
+        <div class="sc-l">Today's Orders</div>
+      </div>
+      <div class="sc-badge">Today</div>
+    </div>
+
+    <!-- Today Revenue (hide/show) -->
+    <div class="sc sc-green">
+      <div class="sc-icon">💰</div>
+      <div class="sc-body">
+        <div class="sc-n" [class.sc-hidden]="hideTodayRevenue">
+          {{ hideTodayRevenue ? '••••' : ('₹'+todayRevenue) }}
+        </div>
+        <div class="sc-l">Today's Revenue</div>
+      </div>
+      <button class="sc-eye" (click)="hideTodayRevenue=!hideTodayRevenue">
+        {{ hideTodayRevenue ? '👁️' : '🙈' }}
+      </button>
+    </div>
+
+    <!-- Pending -->
+    <div class="sc sc-yellow" [class.sc-alert]="todayPending>0">
+      <div class="sc-icon">⏳</div>
+      <div class="sc-body">
+        <div class="sc-n">{{ todayPending }}</div>
+        <div class="sc-l">Pending Orders</div>
+      </div>
+      <div class="sc-badge" [class.badge-alert]="todayPending>0">
+        {{ todayPending>0 ? 'Action!' : 'All clear' }}
+      </div>
+    </div>
+
+    <!-- Paid Today -->
+    <div class="sc sc-emerald">
+      <div class="sc-icon">💚</div>
+      <div class="sc-body">
+        <div class="sc-n">{{ todayPaid }}</div>
+        <div class="sc-l">Paid Today</div>
+      </div>
+      <div class="sc-badge">Today</div>
+    </div>
+
+    <!-- ★ ITEM QTY COUNT — highlighted ★ -->
+    <div class="sc sc-violet sc-qty">
+      <div class="sc-icon">🍽️</div>
+      <div class="sc-body">
+        <div class="sc-n sc-qty-n">{{ todayItemQty }}</div>
+        <div class="sc-l">Items Ordered Today</div>
+        <div class="sc-qty-sub">{{ stats.totalMenuItems }} menu items active</div>
+      </div>
+      <div class="sc-badge">Qty</div>
+    </div>
+
+    <!-- Total Revenue (hide/show) -->
+    <div class="sc sc-purple">
+      <div class="sc-icon">💎</div>
+      <div class="sc-body">
+        <div class="sc-n" [class.sc-hidden]="hideTotalRevenue">
+          {{ hideTotalRevenue ? '••••' : ('₹'+totalRevenue) }}
+        </div>
+        <div class="sc-l">Total Revenue</div>
+      </div>
+      <button class="sc-eye" (click)="hideTotalRevenue=!hideTotalRevenue">
+        {{ hideTotalRevenue ? '👁️' : '🙈' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ORDERS SECTION -->
+  <div class="orders-sec">
+    <div class="os-tabs">
+      <button class="os-tab" [class.os-tab-on]="activeTab==='today'" (click)="activeTab='today'">
+        🕐 Today's Orders <span class="os-cnt">{{ todayOrders.length }}</span>
+      </button>
+      <button class="os-tab" [class.os-tab-on]="activeTab==='history'" (click)="activeTab='history'">
+        📅 History <span class="os-cnt">{{ historyOrders.length }}</span>
+      </button>
+    </div>
+
+    <div class="os-search">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input [(ngModel)]="searchQuery" placeholder="Search by name, phone, order #…"/>
+      <button *ngIf="searchQuery" (click)="searchQuery=''">✕</button>
+    </div>
+
+    <div class="os-empty" *ngIf="displayedOrders.length===0 && !loading">
+      <div class="oe-ico">{{ activeTab==='today' ? '🍽️' : '📅' }}</div>
+      <div class="oe-t">{{ activeTab==='today' ? 'No orders today yet' : 'No history orders' }}</div>
+      <div class="oe-s">{{ activeTab==='today' ? 'Orders will appear here in real time' : 'Past orders from previous days appear here' }}</div>
+    </div>
+
+    <div class="os-grid">
+      <div *ngFor="let order of displayedOrders; let i=index"
+           class="oc" [class.oc-paid]="order.paid"
+           [style.animation-delay]="(i*35)+'ms'">
+
+        <div class="oc-head">
+          <span class="oc-num">#{{ order.dailyOrderNumber || order.id }}</span>
+          <div class="oc-badges">
+            <span class="oc-st" [ngClass]="'ost-'+statusClass(order.status)">{{ order.status }}</span>
+            <span class="oc-py paid"   *ngIf="order.paid">💚 PAID</span>
+            <span class="oc-py unpaid" *ngIf="!order.paid">🔴 UNPAID</span>
+          </div>
+        </div>
+
+        <div class="oc-cust">
+          <span class="oc-cn">{{ order.customerName || '—' }}</span>
+          <span class="oc-cd" *ngIf="order.tableNumber"> · 🪑 {{ order.tableNumber }}</span>
+          <span class="oc-cd" *ngIf="order.customerPhone"> · {{ order.customerPhone }}</span>
+        </div>
+
+        <div class="oc-time">🕐 {{ activeTab==='today' ? formatTime(order.createdAt) : formatDate(order.createdAt) }}</div>
+
+        <div class="oc-items">
+          <ng-container *ngIf="parcelFirst">
+            <ng-container *ngIf="hasParcel(order)">
+              <div class="oci-hdr oci-p">📦 PARCEL</div>
+              <div *ngFor="let oi of parcelItems(order)" class="oci-row">
+                <span class="oci-name">{{ oi.itemName || oi.menuItem?.name }}</span>
+                <span class="oci-qty">×{{ oi.quantity }}</span>
+                <span class="oci-price">₹{{ n(oi.unitPrice)*oi.quantity }}</span>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="hasDineIn(order)">
+              <div class="oci-hdr oci-d">🪑 DINE-IN</div>
+              <div *ngFor="let oi of dineInItems(order)" class="oci-row">
+                <span class="oci-name">{{ oi.itemName || oi.menuItem?.name }}</span>
+                <span class="oci-qty">×{{ oi.quantity }}</span>
+                <span class="oci-price">₹{{ n(oi.unitPrice)*oi.quantity }}</span>
+              </div>
+            </ng-container>
+          </ng-container>
+          <ng-container *ngIf="!parcelFirst">
+            <ng-container *ngIf="hasDineIn(order)">
+              <div class="oci-hdr oci-d">🪑 DINE-IN</div>
+              <div *ngFor="let oi of dineInItems(order)" class="oci-row">
+                <span class="oci-name">{{ oi.itemName || oi.menuItem?.name }}</span>
+                <span class="oci-qty">×{{ oi.quantity }}</span>
+                <span class="oci-price">₹{{ n(oi.unitPrice)*oi.quantity }}</span>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="hasParcel(order)">
+              <div class="oci-hdr oci-p">📦 PARCEL</div>
+              <div *ngFor="let oi of parcelItems(order)" class="oci-row">
+                <span class="oci-name">{{ oi.itemName || oi.menuItem?.name }}</span>
+                <span class="oci-qty">×{{ oi.quantity }}</span>
+                <span class="oci-price">₹{{ n(oi.unitPrice)*oi.quantity }}</span>
+              </div>
+            </ng-container>
+          </ng-container>
+          <div class="oci-pc" *ngIf="n(order.parcelCharges)>0">
+            📦 Parcel charges: <strong>₹{{ n(order.parcelCharges) }}</strong>
+          </div>
+          <div class="oci-notes" *ngIf="order.notes">📝 {{ order.notes }}</div>
+        </div>
+
+        <div class="oc-foot">
+          <span class="oc-fi">{{ order.totalItems }} item(s)</span>
+          <span class="oc-ft">₹{{ n(order.totalAmount) }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

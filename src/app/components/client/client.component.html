@@ -1,0 +1,747 @@
+<!-- ══════════════════════════════════════════════════════
+     ORDERING VIEW
+══════════════════════════════════════════════════════ -->
+<ng-container *ngIf="appView==='ordering'">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-top">
+      <div class="brand">
+        <div class="brand-logo">🍛</div>
+        <div class="brand-text">
+          <div class="brand-god">ಶ್ರೀ ಕಬ್ಬಾಳಮ್ಮ</div>
+          <div class="brand-name">Famous 99 Variety Dosa</div>
+        </div>
+      </div>
+      <div class="hdr-actions">
+        <button class="hdr-btn" (click)="settingsOpen=true; settingTab='general'" title="Settings">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="cart-fab" (click)="toggleCart()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span class="cart-count" *ngIf="totalQty>0">{{totalQty}}</span>
+        </button>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <svg class="search-ico" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" [(ngModel)]="searchQuery" (ngModelChange)="onSearch()" placeholder="Search dosa by name or number…"/>
+      <button class="search-clear" *ngIf="searchQuery" (click)="clearSearch()">✕</button>
+    </div>
+    <div class="cat-scroll" *ngIf="!isSearching">
+      <button class="cat-pill" [class.active]="selectedCat==='ALL'" (click)="applyFilter('ALL')">All</button>
+      <button *ngFor="let c of categories" class="cat-pill" [class.active]="selectedCat===c" (click)="applyFilter(c)">{{c}}</button>
+    </div>
+  </header>
+
+  <!-- MENU BODY -->
+  <main class="menu-body">
+    <div *ngIf="loading" class="loading-state">
+      <div class="spin-ring"></div>
+      <p>Loading menu…</p>
+    </div>
+
+    <!-- SEARCH RESULTS -->
+    <ng-container *ngIf="!loading && isSearching">
+      <div class="results-label">{{searchResults.length}} result(s) for "{{searchQuery}}"</div>
+      <div class="item-group">
+        <div *ngFor="let it of searchResults" class="item-row" [class.sold-out-row]="!it.available">
+          <div class="item-num">{{it.serialNo}}</div>
+          <div class="item-img" *ngIf="it.imageUrl">
+            <img [src]="imgUrl(it.imageUrl)" [alt]="it.name"
+                 style="width:100%;height:100%;object-fit:cover;display:block;"
+                 (error)="$any($event.target).parentElement.style.display='none'">
+          </div>
+          <div class="item-info">
+            <span class="item-name">{{it.name}}</span>
+            <span class="item-cat">{{it.category}}</span>
+            <span class="sold-tag" *ngIf="!it.available">Sold Out</span>
+          </div>
+          <div class="item-right">
+            <span class="item-price">₹{{n(it.price)}}</span>
+            <div class="split-qty" *ngIf="it.available">
+              <ng-container *ngIf="parcelFirst">
+                <div class="sq-row sq-row-parcel" [class.sq-collapsed]="parcelQtyFor(it)===0">
+                  <ng-container *ngIf="parcelQtyFor(it)>0">
+                    <span class="sq-lbl">P</span>
+                    <button class="sq-btn sq-m" (click)="remParcel(it)">−</button>
+                    <span class="sq-val">{{parcelQtyFor(it)}}</span>
+                  </ng-container>
+                  <button class="sq-btn sq-p" (click)="addParcel(it)">+</button>
+                </div>
+                <div class="sq-row sq-row-dinein" [class.sq-collapsed]="dineInQtyFor(it)===0">
+                  <ng-container *ngIf="dineInQtyFor(it)>0">
+                    <span class="sq-lbl">D</span>
+                    <button class="sq-btn sq-m" (click)="remDineIn(it)">−</button>
+                    <span class="sq-val sq-val-d">{{dineInQtyFor(it)}}</span>
+                  </ng-container>
+                  <button class="sq-btn sq-d" (click)="addDineIn(it)">+</button>
+                </div>
+              </ng-container>
+              <ng-container *ngIf="!parcelFirst">
+                <div class="sq-row sq-row-dinein" [class.sq-collapsed]="dineInQtyFor(it)===0">
+                  <ng-container *ngIf="dineInQtyFor(it)>0">
+                    <span class="sq-lbl">D</span>
+                    <button class="sq-btn sq-m" (click)="remDineIn(it)">−</button>
+                    <span class="sq-val sq-val-d">{{dineInQtyFor(it)}}</span>
+                  </ng-container>
+                  <button class="sq-btn sq-d" (click)="addDineIn(it)">+</button>
+                </div>
+                <div class="sq-row sq-row-parcel" [class.sq-collapsed]="parcelQtyFor(it)===0">
+                  <ng-container *ngIf="parcelQtyFor(it)>0">
+                    <span class="sq-lbl">P</span>
+                    <button class="sq-btn sq-m" (click)="remParcel(it)">−</button>
+                    <span class="sq-val">{{parcelQtyFor(it)}}</span>
+                  </ng-container>
+                  <button class="sq-btn sq-p" (click)="addParcel(it)">+</button>
+                </div>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="searchResults.length===0" class="empty-state">No items match "{{searchQuery}}"</div>
+    </ng-container>
+
+    <!-- GROUPED MENU -->
+    <ng-container *ngIf="!loading && !isSearching">
+      <ng-container *ngFor="let grp of groupedItems">
+        <div class="cat-hdr"><span>{{grp.category}}</span></div>
+        <div class="item-group">
+          <div *ngFor="let it of grp.items" class="item-row" [class.sold-out-row]="!it.available">
+            <div class="item-num">{{it.serialNo}}</div>
+            <div class="item-img" *ngIf="it.imageUrl">
+              <img [src]="imgUrl(it.imageUrl)" [alt]="it.name"
+                   style="width:100%;height:100%;object-fit:cover;display:block;"
+                   (error)="$any($event.target).parentElement.style.display='none'">
+            </div>
+            <div class="item-info">
+              <span class="item-name">{{it.name}}</span>
+              <span class="sold-tag" *ngIf="!it.available">Sold Out</span>
+            </div>
+            <div class="item-right">
+              <span class="item-price">₹{{n(it.price)}}</span>
+              <div class="split-qty" *ngIf="it.available">
+                <ng-container *ngIf="parcelFirst">
+                  <div class="sq-row sq-row-parcel" [class.sq-collapsed]="parcelQtyFor(it)===0">
+                    <ng-container *ngIf="parcelQtyFor(it)>0">
+                      <span class="sq-lbl">P</span>
+                      <button class="sq-btn sq-m" (click)="remParcel(it)">−</button>
+                      <span class="sq-val">{{parcelQtyFor(it)}}</span>
+                    </ng-container>
+                    <button class="sq-btn sq-p" (click)="addParcel(it)">+</button>
+                  </div>
+                  <div class="sq-row sq-row-dinein" [class.sq-collapsed]="dineInQtyFor(it)===0">
+                    <ng-container *ngIf="dineInQtyFor(it)>0">
+                      <span class="sq-lbl">D</span>
+                      <button class="sq-btn sq-m" (click)="remDineIn(it)">−</button>
+                      <span class="sq-val sq-val-d">{{dineInQtyFor(it)}}</span>
+                    </ng-container>
+                    <button class="sq-btn sq-d" (click)="addDineIn(it)">+</button>
+                  </div>
+                </ng-container>
+                <ng-container *ngIf="!parcelFirst">
+                  <div class="sq-row sq-row-dinein" [class.sq-collapsed]="dineInQtyFor(it)===0">
+                    <ng-container *ngIf="dineInQtyFor(it)>0">
+                      <span class="sq-lbl">D</span>
+                      <button class="sq-btn sq-m" (click)="remDineIn(it)">−</button>
+                      <span class="sq-val sq-val-d">{{dineInQtyFor(it)}}</span>
+                    </ng-container>
+                    <button class="sq-btn sq-d" (click)="addDineIn(it)">+</button>
+                  </div>
+                  <div class="sq-row sq-row-parcel" [class.sq-collapsed]="parcelQtyFor(it)===0">
+                    <ng-container *ngIf="parcelQtyFor(it)>0">
+                      <span class="sq-lbl">P</span>
+                      <button class="sq-btn sq-m" (click)="remParcel(it)">−</button>
+                      <span class="sq-val">{{parcelQtyFor(it)}}</span>
+                    </ng-container>
+                    <button class="sq-btn sq-p" (click)="addParcel(it)">+</button>
+                  </div>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+      <div *ngIf="groupedItems.length===0" class="empty-state">No items available.</div>
+    </ng-container>
+  </main>
+
+  <!-- OVERLAY -->
+  <div class="overlay" [class.show]="cartOpen||settingsOpen" (click)="closePanel()"></div>
+
+  <!-- ══ CART PANEL ══ -->
+  <div class="side-panel" [class.open]="cartOpen">
+    <div class="panel-hdr orange-hdr">
+      <div class="panel-hdr-left">
+        <span class="panel-hdr-icon">🛒</span>
+        <span>Your Order</span>
+        <span class="panel-hdr-count" *ngIf="totalQty>0">{{totalQty}} items</span>
+      </div>
+      <button class="close-btn" (click)="cartOpen=false">✕</button>
+    </div>
+    <div class="panel-scroll">
+      <div class="cart-empty" *ngIf="cartLines.length===0">
+        <div class="cart-empty-icon">🍽️</div>
+        <p>Your cart is empty</p>
+        <small>Add items from the menu</small>
+      </div>
+      <ng-container *ngFor="let sec of displayedSections">
+        <div class="cart-section-hdr" [class.parcel-hdr]="sec.tag==='parcel'" [class.dinein-hdr]="sec.tag==='dinein'">
+          {{sec.label}}
+          <span class="section-total" *ngIf="sec.tag==='parcel' && parcelCharge>0"> · +₹{{parcelCharge}} pkg</span>
+        </div>
+        <div *ngFor="let l of sec.lines" class="cart-line">
+          <div class="cl-num">#{{serialOf(l.menuItem.id)}}</div>
+          <div class="cl-info">
+            <div class="cl-name">{{l.menuItem.name}}</div>
+            <div class="cl-sub">{{lineSub(l)}} = <strong>₹{{lineTotal(l)}}</strong></div>
+          </div>
+          <div class="cl-controls">
+            <button class="cl-m" (click)="l.isParcel ? remParcel(l.menuItem) : remDineIn(l.menuItem)">−</button>
+            <span class="cl-qty">{{l.quantity}}</span>
+            <button class="cl-p" (click)="l.isParcel ? addParcel(l.menuItem) : addDineIn(l.menuItem)">+</button>
+          </div>
+          <button class="cl-del" (click)="delLine(l.key)">✕</button>
+        </div>
+      </ng-container>
+      <div class="cart-note" *ngIf="cartLines.length>0">
+        📦 = parcel charge applies · 🪑 = dine-in, no extra charge
+      </div>
+    </div>
+    <div class="order-form" *ngIf="cartLines.length>0">
+      <div class="form-grid">
+        <div class="fg-field">
+          <label>Name <span class="req">*</span></label>
+          <input [(ngModel)]="customerName" placeholder="Your name"/>
+        </div>
+        <div class="fg-field">
+          <label>Phone</label>
+          <input type="tel" [(ngModel)]="customerPhone" placeholder="Phone number"/>
+        </div>
+        <div class="fg-field">
+          <label>Table</label>
+          <input [(ngModel)]="tableNumber" placeholder="Table no."/>
+        </div>
+        <div class="fg-field fg-full">
+          <label>Notes</label>
+          <input [(ngModel)]="notes" placeholder="Special instructions…"/>
+        </div>
+      </div>
+      <div class="order-summary">
+        <div class="os-row"><span>Food subtotal</span><span>₹{{foodSubtotal}}</span></div>
+        <div class="os-row pkg-row" *ngIf="parcelCharge>0">
+          <span>📦 Parcel charges</span><span>₹{{parcelCharge}}</span>
+        </div>
+        <div class="os-row os-total">
+          <span>💰 Grand Total</span><span>₹{{grandTotal}}</span>
+        </div>
+      </div>
+      <button class="place-order-btn" (click)="placeOrder()" [disabled]="placing">
+        <span *ngIf="!placing">✅ Place Order — ₹{{grandTotal}}</span>
+        <span *ngIf="placing" class="btn-loading">Placing order…</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS PANEL ══ -->
+  <div class="side-panel settings-panel" [class.open]="settingsOpen">
+    <div class="panel-hdr dark-hdr">
+      <div class="panel-hdr-left">
+        <span class="panel-hdr-icon">⚙️</span>
+        <span>Settings</span>
+      </div>
+      <button class="close-btn" (click)="settingsOpen=false">✕</button>
+    </div>
+
+    <div class="settings-tabs">
+      <button class="stab" [class.stab-active]="settingTab==='general'" (click)="settingTab='general'">
+        <span>⚙️</span> General
+      </button>
+      <button class="stab" [class.stab-active]="settingTab==='menu'" (click)="openMenuTab()">
+        <span>🍛</span> Menu
+      </button>
+      <button class="stab" [class.stab-active]="settingTab==='admin'" (click)="openAdminTab()">
+        <span>🔐</span> Admin
+        <span class="admin-dot" [class.logged-in]="adminLoggedIn"></span>
+      </button>
+    </div>
+
+    <div class="panel-scroll">
+
+      <!-- ══ GENERAL TAB ══ -->
+      <ng-container *ngIf="settingTab==='general'">
+        <div class="setting-section">
+          <div class="setting-card">
+            <div class="sc-label">📋 Daily Order Number</div>
+            <div class="sc-desc">Next order will be: <strong>#{{nextOrderNum}}</strong></div>
+            <input type="number" [(ngModel)]="orderNumInput" min="1" placeholder="Start from…" class="sc-input"/>
+          </div>
+          <div class="setting-card">
+            <div class="sc-label">📲 Second WhatsApp Number</div>
+            <div class="sc-desc">Receipt sent to admin <strong>7676666246</strong> + this number.</div>
+            <input type="tel" [(ngModel)]="extraWAInput" placeholder="e.g. 9876543210 (no +91)" class="sc-input"/>
+            <div class="sc-saved" *ngIf="savedExtraWA">✅ Saved: +{{savedExtraWA}}</div>
+          </div>
+          <div class="setting-card">
+            <div class="sc-label">📋 Cart Display Order</div>
+            <div class="sc-desc">Controls button order on the main menu page.</div>
+            <div class="radio-group">
+              <label class="radio-opt" [class.selected]="parcelFirst">
+                <input type="radio" [value]="true" [(ngModel)]="parcelFirst" name="po">
+                <span class="radio-circle"></span>
+                <span>📦 Parcel First</span>
+              </label>
+              <label class="radio-opt" [class.selected]="!parcelFirst">
+                <input type="radio" [value]="false" [(ngModel)]="parcelFirst" name="po">
+                <span class="radio-circle"></span>
+                <span>🪑 Dine-In First</span>
+              </label>
+            </div>
+          </div>
+          <button class="save-btn" (click)="saveGeneralSettings()">💾 Save Settings</button>
+        </div>
+      </ng-container>
+
+      <!-- ══ MENU TAB ══ -->
+      <ng-container *ngIf="settingTab==='menu'">
+
+        <!-- PIN entry -->
+        <ng-container *ngIf="menuGate==='pin'">
+          <div class="pin-screen">
+            <div class="pin-screen-icon">🔐</div>
+            <h3>Menu Access</h3>
+            <p>Enter your 4-digit PIN to manage menu items</p>
+            <div class="pin-dots" [class.shake]="pinShake" [class.ok]="pinSuccess">
+              <div class="pin-dot" [class.filled]="pinDigits.length>0" [class.ok]="pinSuccess"></div>
+              <div class="pin-dot" [class.filled]="pinDigits.length>1" [class.ok]="pinSuccess"></div>
+              <div class="pin-dot" [class.filled]="pinDigits.length>2" [class.ok]="pinSuccess"></div>
+              <div class="pin-dot" [class.filled]="pinDigits.length>3" [class.ok]="pinSuccess"></div>
+            </div>
+            <div class="pin-feedback ok-msg"  *ngIf="pinSuccess">✅ Access granted!</div>
+            <div class="pin-feedback err-msg" *ngIf="pinShake && !pinSuccess">❌ Wrong PIN</div>
+            <div class="numpad" *ngIf="!pinSuccess">
+              <button class="npk" (click)="pinTap('1')">1</button>
+              <button class="npk" (click)="pinTap('2')">2</button>
+              <button class="npk" (click)="pinTap('3')">3</button>
+              <button class="npk" (click)="pinTap('4')">4</button>
+              <button class="npk" (click)="pinTap('5')">5</button>
+              <button class="npk" (click)="pinTap('6')">6</button>
+              <button class="npk" (click)="pinTap('7')">7</button>
+              <button class="npk" (click)="pinTap('8')">8</button>
+              <button class="npk" (click)="pinTap('9')">9</button>
+              <button class="npk npk-forgot" (click)="startForgotPin()">Forgot?</button>
+              <button class="npk npk-zero" (click)="pinTap('0')">0</button>
+              <button class="npk npk-del" (click)="pinBackspace()">⌫</button>
+            </div>
+
+          </div>
+        </ng-container>
+
+        <!-- Forgot PIN: phone -->
+        <ng-container *ngIf="menuGate==='fp_phone'">
+          <div class="flow-card">
+            <div class="flow-icon">📲</div>
+            <h3>Reset PIN</h3>
+            <p>OTP will be sent to admin WhatsApp <strong>7676666246</strong></p>
+            <input type="tel" [(ngModel)]="fpPhone" placeholder="Your 10-digit phone" class="sc-input"/>
+            <div class="flow-err" *ngIf="fpError">⚠️ {{fpError}}</div>
+            <button class="flow-btn" (click)="sendPinOtp()" [disabled]="fpLoading">
+              {{fpLoading ? 'Sending…' : '📲 Send OTP'}}
+            </button>
+            <button class="flow-back" (click)="menuGate='pin'">← Back</button>
+          </div>
+        </ng-container>
+
+        <!-- Forgot PIN: OTP -->
+        <ng-container *ngIf="menuGate==='fp_otp'">
+          <div class="flow-card">
+            <div class="flow-icon">🔢</div>
+            <h3>Enter OTP</h3>
+            <p>Check WhatsApp <strong>7676666246</strong> for your OTP</p>
+            <input type="tel" [(ngModel)]="fpOtp" placeholder="6-digit OTP" class="sc-input" maxlength="6"/>
+            <div class="flow-err" *ngIf="fpError">⚠️ {{fpError}}</div>
+            <button class="flow-btn" (click)="verifyPinOtp()" [disabled]="fpLoading">
+              {{fpLoading ? 'Verifying…' : '✅ Verify'}}
+            </button>
+            <button class="flow-back" (click)="menuGate='fp_phone'">← Back</button>
+          </div>
+        </ng-container>
+
+        <!-- Forgot PIN: new PIN -->
+        <ng-container *ngIf="menuGate==='fp_reset'">
+          <div class="flow-card">
+            <div class="flow-icon">🔑</div>
+            <h3>Set New PIN</h3>
+            <p>OTP verified ✅</p>
+            <input type="password" inputmode="numeric" maxlength="4" [(ngModel)]="fpNewPin" placeholder="New 4-digit PIN" class="sc-input"/>
+            <input type="password" inputmode="numeric" maxlength="4" [(ngModel)]="fpConfirm" placeholder="Confirm PIN" class="sc-input" style="margin-top:8px"/>
+            <div class="flow-err"     *ngIf="fpError">⚠️ {{fpError}}</div>
+            <div class="flow-success" *ngIf="fpSuccess">{{fpSuccess}}</div>
+            <button class="flow-btn" (click)="saveNewPin()">💾 Save PIN</button>
+            <button class="flow-back" (click)="menuGate='pin'">← Back</button>
+          </div>
+        </ng-container>
+
+        <!-- ══ MENU MANAGEMENT (unlocked) ══ -->
+        <ng-container *ngIf="menuGate==='open'">
+          <div class="menu-search">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input [(ngModel)]="menuSearchQuery" (ngModelChange)="applyMenuSearch()" placeholder="Search items…"/>
+            <button *ngIf="menuSearchQuery" (click)="menuSearchQuery=''; applyMenuSearch()">✕</button>
+          </div>
+
+          <!-- Global search results -->
+          <div *ngIf="menuSearchAllMode">
+            <div class="search-results-hdr">
+              <span>{{menuSearchAllResults.length}} result(s)</span>
+              <button (click)="menuSearchQuery=''; applyMenuSearch()">Clear</button>
+            </div>
+            <div class="mgmt-list">
+              <div *ngFor="let it of menuSearchAllResults" class="mgmt-row" [class.mgmt-off]="!it.available">
+                <ng-container *ngIf="!editingItem || editingItem.id!==it.id">
+                  <div class="mr-main">
+                    <span class="mr-no">{{it.serialNo}}</span>
+                    <span class="mr-name" [class.mr-off]="!it.available">{{it.name}}</span>
+                    <span class="mr-cat-tag">{{it.category}}</span>
+                    <span class="mr-price">₹{{n(it.price)}}</span>
+                    <label class="tog-sw">
+                      <input type="checkbox" [checked]="it.available" (change)="it.available=!it.available; saveEdit_direct(it)">
+                      <span class="tog-track" [class.tog-on]="it.available"></span>
+                    </label>
+                  </div>
+                  <div class="mr-actions">
+                    <button class="mr-btn mr-edit" (click)="startEdit(it); openSection(it.category || '')">✏️ Edit</button>
+                    <button class="mr-btn mr-del" (click)="deleteItem(it)" *ngIf="!isProtected(it.category)">🗑️ Delete</button>
+                    <span class="prot-tag" *ngIf="isProtected(it.category)">🔒 Core</span>
+                  </div>
+                </ng-container>
+              </div>
+              <div *ngIf="menuSearchAllResults.length===0" class="empty-state">No items match "{{menuSearchQuery}}"</div>
+            </div>
+          </div>
+
+          <!-- Category pills -->
+          <div class="cat-pills" *ngIf="!menuSearchAllMode">
+            <button *ngFor="let s of menuSections" class="cpill" [class.cpill-on]="editSection===s" (click)="openSection(s)">{{s}}</button>
+            <button class="cpill cpill-new" (click)="editSection='__new__'; isNewCategory=true; editItems=[]; filteredEditItems=[]">+ New</button>
+          </div>
+
+          <!-- Section items -->
+          <ng-container *ngIf="!menuSearchAllMode && editSection && editSection!=='__new__'">
+            <div class="section-label">
+              <span>{{editSection}}</span>
+            </div>
+            <div class="mgmt-list">
+              <div *ngFor="let it of filteredEditItems; let i=index" class="mgmt-row" [class.mgmt-off]="!it.available">
+                <ng-container *ngIf="!editingItem || editingItem.id!==it.id">
+                  <div class="mr-main">
+                    <span class="mr-no">{{it.serialNo}}</span>
+                    <span class="mr-name" [class.mr-off]="!it.available">{{it.name}}</span>
+                    <span class="mr-price">₹{{n(it.price)}}</span>
+                    <label class="tog-sw" (click)="$event.stopPropagation()">
+                      <input type="checkbox" [checked]="it.available" (change)="quickToggle(it)">
+                      <span class="tog-track" [class.tog-on]="it.available"></span>
+                    </label>
+                  </div>
+                  <div class="mr-actions">
+                    <button class="mr-btn mr-edit" (click)="startEdit(it)">✏️ Edit</button>
+                    <button class="mr-btn mr-del" (click)="deleteItem(it)" *ngIf="!isProtected(it.category)">🗑️ Delete</button>
+                    <span class="prot-tag" *ngIf="isProtected(it.category)">🔒 Core</span>
+                  </div>
+                </ng-container>
+                <div class="edit-form" *ngIf="editingItem && editingItem.id===it.id">
+                  <input [(ngModel)]="editingItem.name" placeholder="Item name" class="sc-input"/>
+                  <input type="number" [(ngModel)]="editingItem.price" placeholder="Price (₹)" class="sc-input" style="margin-top:6px"/>
+                  <div class="edit-form-btns">
+                    <button class="mr-btn mr-save" (click)="saveEdit()">💾 Save</button>
+                    <button class="mr-btn mr-cancel" (click)="cancelEdit()">Cancel</button>
+                  </div>
+                </div>
+              </div>
+              <div *ngIf="filteredEditItems.length===0 && menuSearchQuery" class="empty-state" style="padding:14px">No matches.</div>
+              <div *ngIf="editItems.length===0 && !menuSearchQuery" class="empty-state" style="padding:14px">No items yet.</div>
+            </div>
+
+            <!-- Parcel charge -->
+            <div class="parcel-charge-card">
+              <div class="pcc-hdr">
+                <span>📦 Parcel Charge — {{editSection}}</span>
+                <span class="pcc-rate">₹{{getParcelRate(editSection)}} / item</span>
+              </div>
+              <ng-container *ngIf="editingParcelCat===editSection">
+                <div class="pcc-edit">
+                  <input type="number" [(ngModel)]="editingParcelVal" placeholder="₹ amount" class="sc-input pcc-input" min="0"/>
+                  <button class="mr-btn mr-save" (click)="saveParcelRate()">💾</button>
+                  <button class="mr-btn mr-cancel" (click)="cancelEditParcel()">✕</button>
+                </div>
+                <div class="pcc-hint">Enter 0 for no parcel charge</div>
+              </ng-container>
+              <button class="pcc-btn" *ngIf="editingParcelCat!==editSection" (click)="startEditParcel(editSection)">✏️ Set Charge</button>
+            </div>
+
+            <!-- Add item -->
+            <div class="add-item-box" *ngIf="!isProtected(editSection)">
+              <div class="aib-label">➕ Add to "{{editSection}}"</div>
+              <input [(ngModel)]="newName" placeholder="Item name" class="sc-input"/>
+              <input type="number" [(ngModel)]="newPrice" placeholder="Price (₹)" class="sc-input" style="margin-top:6px"/>
+              <button class="save-btn" (click)="addItem()">Add Item</button>
+            </div>
+          </ng-container>
+
+          <!-- New category -->
+          <ng-container *ngIf="!menuSearchAllMode && editSection==='__new__'">
+            <div class="add-item-box">
+              <div class="aib-label">➕ New Category &amp; Item</div>
+              <input [(ngModel)]="newCat" placeholder="Category name" class="sc-input"/>
+              <input [(ngModel)]="newName" placeholder="Item name" class="sc-input" style="margin-top:6px"/>
+              <input type="number" [(ngModel)]="newPrice" placeholder="Price (₹)" class="sc-input" style="margin-top:6px"/>
+              <button class="save-btn" (click)="addItem()">Create</button>
+            </div>
+          </ng-container>
+
+          <div *ngIf="!menuSearchAllMode && !editSection" class="empty-state" style="padding:20px">Select a category above.</div>
+        </ng-container>
+      </ng-container>
+
+      <!-- ══ ADMIN TAB ══ -->
+      <ng-container *ngIf="settingTab==='admin'">
+
+        <!-- Logged in state -->
+        <ng-container *ngIf="adminLoggedIn && adminView==='done'">
+          <div class="admin-loggedin">
+            <div class="ali-avatar">👤</div>
+            <div class="ali-name">{{adminUser || 'Admin'}}</div>
+            <div class="ali-status">
+              <span class="ali-dot"></span>
+              Logged in — Full access active
+            </div>
+            <div class="ali-perms">
+              <span class="perm-tag">✅ Add Items</span>
+              <span class="perm-tag">✅ Edit Items</span>
+              <span class="perm-tag">✅ Delete Items</span>
+              <span class="perm-tag">✅ Upload Images</span>
+            </div>
+            <a href="/admin/dashboard" class="ap-link">
+              🖥️ Go to Admin Dashboard
+            </a>
+            <button class="logout-btn" (click)="doAdminLogout()">🚪 Sign Out</button>
+          </div>
+        </ng-container>
+
+        <!-- Login form — direct, no intro page, no new tab -->
+        <ng-container *ngIf="!adminLoggedIn && adminView==='login'">
+          <div class="admin-login-screen">
+            <div class="als-header">
+              <span class="als-icon">🔐</span>
+              <h3>Admin Login</h3>
+              <p>Enter your credentials to access the Admin Dashboard.</p>
+            </div>
+            <div class="als-form">
+              <div class="als-field">
+                <label>Username</label>
+                <div class="als-field-wrap">
+                  <span class="als-field-ico">👤</span>
+                  <input [(ngModel)]="adminUsername"
+                         class="sc-input sc-input-ico"
+                         autocomplete="off"
+                         placeholder="Enter username"
+                         (keyup.enter)="doAdminLogin()"/>
+                </div>
+              </div>
+              <div class="als-field">
+                <label>Password</label>
+                <div class="pw-wrap">
+                  <input [type]="adminShowPw ? 'text' : 'password'"
+                         [(ngModel)]="adminPassword"
+                         class="sc-input"
+                         autocomplete="off"
+                         placeholder="e.g. @Pass123"
+                         (keyup.enter)="doAdminLogin()"/>
+                  <button class="pw-eye" (click)="adminShowPw=!adminShowPw" type="button">
+                    {{adminShowPw ? '🙈' : '👁️'}}
+                  </button>
+                </div>
+              </div>
+              <div class="als-err" *ngIf="adminError">⚠️ {{adminError}}</div>
+              <button class="login-btn" (click)="doAdminLogin()" [disabled]="adminLoading">
+                {{adminLoading ? 'Signing in…' : '🔓 Sign In'}}
+              </button>
+              <button class="forgot-link" (click)="goAdminForgot()">Forgot password?</button>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Forgot password: phone -->
+        <ng-container *ngIf="adminView==='forgot'">
+          <div class="flow-card">
+            <div class="flow-icon">📲</div>
+            <h3>Reset Password</h3>
+            <p>OTP will be sent to admin WhatsApp <strong>7676666246</strong></p>
+            <input type="tel" [(ngModel)]="adminFpPhone" placeholder="Your 10-digit phone" class="sc-input"/>
+            <div class="flow-err" *ngIf="adminFpError">⚠️ {{adminFpError}}</div>
+            <button class="flow-btn" (click)="adminSendOtp()" [disabled]="adminFpLoading">
+              {{adminFpLoading ? 'Sending…' : '📲 Send OTP'}}
+            </button>
+            <button class="flow-back" (click)="adminView='login'; adminFpError=''">← Back to Login</button>
+          </div>
+        </ng-container>
+
+        <!-- Forgot password: OTP -->
+        <ng-container *ngIf="adminView==='otp'">
+          <div class="flow-card">
+            <div class="flow-icon">🔢</div>
+            <h3>Enter OTP</h3>
+            <p>Check WhatsApp for the OTP</p>
+            <input type="tel" [(ngModel)]="adminFpOtp" placeholder="6-digit OTP" class="sc-input" maxlength="6"/>
+            <div class="flow-err" *ngIf="adminFpError">⚠️ {{adminFpError}}</div>
+            <button class="flow-btn" (click)="adminVerifyOtp()" [disabled]="adminFpLoading">
+              {{adminFpLoading ? 'Verifying…' : '✅ Verify OTP'}}
+            </button>
+            <button class="flow-back" (click)="adminView='forgot'">← Back</button>
+          </div>
+        </ng-container>
+
+        <!-- Forgot password: new password -->
+        <ng-container *ngIf="adminView==='reset'">
+          <div class="flow-card">
+            <div class="flow-icon">🔑</div>
+            <h3>Set New Password</h3>
+            <p>OTP verified — choose a strong password</p>
+            <div class="fp-field">
+              <span class="fp-ico">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </span>
+              <input type="password" [(ngModel)]="adminFpNew" placeholder="Enter new password" class="sc-input fp-inp"/>
+            </div>
+            <div class="fp-field" style="margin-top:8px">
+              <span class="fp-ico">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </span>
+              <input type="password" [(ngModel)]="adminFpConfirm" placeholder="Confirm new password" class="sc-input fp-inp"/>
+            </div>
+            <div class="flow-err"     *ngIf="adminFpError">⚠️ {{adminFpError}}</div>
+            <div class="flow-success" *ngIf="adminFpSuccess">{{adminFpSuccess}}</div>
+            <button class="flow-btn" (click)="adminSaveNewPw()" [disabled]="adminFpLoading">
+              {{adminFpLoading ? 'Saving…' : '💾 Save Password'}}
+            </button>
+            <button class="flow-back" (click)="adminView='login'; adminFpError=''">← Back to Login</button>
+          </div>
+        </ng-container>
+
+      </ng-container>
+
+    </div>
+  </div>
+</ng-container>
+<!-- END ORDERING VIEW -->
+
+
+<!-- ══════════════════════════════════════════════════
+     SUCCESS PAGE
+══════════════════════════════════════════════════ -->
+<div class="success-page" *ngIf="appView==='success' && placedOrder">
+
+  <div class="sp-header">
+    <div class="sp-check-ring">
+      <div class="sp-check-icon">✓</div>
+    </div>
+    <h1 class="sp-title">Order Placed! 🎉</h1>
+    <p class="sp-subtitle">Order <strong>#{{placedOrder.dailyOrderNumber}}</strong> · {{placedOrder.customerName}}</p>
+
+  </div>
+
+  <div class="sp-scroll">
+    <div class="receipt-title">🧾 Receipt</div>
+    <div class="receipt-card">
+      <ng-container *ngIf="parcelFirst">
+        <ng-container *ngFor="let oi of placedOrder.orderItems">
+          <div class="receipt-row parcel-item" *ngIf="oi.parcel">
+            <span class="rr-icon">📦</span>
+            <span class="rr-name">{{oi.itemName || oi.menuItem?.name}}</span>
+            <span class="rr-qty">×{{oi.quantity}}</span>
+            <span class="rr-amt">₹{{n(oi.unitPrice)*oi.quantity}}</span>
+          </div>
+        </ng-container>
+        <ng-container *ngFor="let oi of placedOrder.orderItems">
+          <div class="receipt-row dinein-item" *ngIf="!oi.parcel">
+            <span class="rr-icon">🪑</span>
+            <span class="rr-name">{{oi.itemName || oi.menuItem?.name}}</span>
+            <span class="rr-qty">×{{oi.quantity}}</span>
+            <span class="rr-amt">₹{{n(oi.unitPrice)*oi.quantity}}</span>
+          </div>
+        </ng-container>
+      </ng-container>
+      <ng-container *ngIf="!parcelFirst">
+        <ng-container *ngFor="let oi of placedOrder.orderItems">
+          <div class="receipt-row dinein-item" *ngIf="!oi.parcel">
+            <span class="rr-icon">🪑</span>
+            <span class="rr-name">{{oi.itemName || oi.menuItem?.name}}</span>
+            <span class="rr-qty">×{{oi.quantity}}</span>
+            <span class="rr-amt">₹{{n(oi.unitPrice)*oi.quantity}}</span>
+          </div>
+        </ng-container>
+        <ng-container *ngFor="let oi of placedOrder.orderItems">
+          <div class="receipt-row parcel-item" *ngIf="oi.parcel">
+            <span class="rr-icon">📦</span>
+            <span class="rr-name">{{oi.itemName || oi.menuItem?.name}}</span>
+            <span class="rr-qty">×{{oi.quantity}}</span>
+            <span class="rr-amt">₹{{n(oi.unitPrice)*oi.quantity}}</span>
+          </div>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+
+  <div class="sp-bottom">
+    <div class="sp-totals">
+      <div class="st-divider"></div>
+      <div class="st-row pkg-row" *ngIf="n(placedOrder.parcelCharges)>0">
+        <span>📦 Parcel charges</span>
+        <span>₹{{n(placedOrder.parcelCharges)}}</span>
+      </div>
+      <div class="st-row st-grand">
+        <span>💰 Grand Total</span>
+        <span>₹{{n(placedOrder.totalAmount)}}</span>
+      </div>
+    </div>
+    <div class="wa-panel">
+      <div class="wa-row">
+        <span class="wa-label">Admin</span>
+        <span class="wa-num">+91 7676666246</span>
+        <button class="wa-send wa-green" (click)="wa1()">Send</button>
+      </div>
+      <div class="wa-row">
+        <span class="wa-label">2nd No.</span>
+        <input class="wa-num-input" type="tel" inputmode="numeric" maxlength="15"
+               [(ngModel)]="waNumber2" placeholder="Enter number"/>
+        <button class="wa-send wa-teal" (click)="wa2()">Send</button>
+      </div>
+      <button class="wa-both" (click)="sendWhatsApp()">📲 Send to Both Numbers</button>
+      <div class="wa-ok" *ngIf="waSent">✅ WhatsApp opened for both numbers!</div>
+    </div>
+    <div class="sp-action-row">
+      <!-- View Orders / Login button — opens Settings → Admin tab -->
+      <a *ngIf="adminLoggedIn" href="/admin/orders" class="sp-btn-admin sp-btn-admin-primary">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+        View Orders
+      </a>
+      <button *ngIf="!adminLoggedIn" class="sp-btn-admin sp-btn-admin-primary"
+              (click)="goToAdminLogin()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        View Orders
+      </button>
+      <!-- New Order — secondary position -->
+      <button class="sp-btn-continue" (click)="continueOrdering()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Order
+      </button>
+    </div>
+    <div class="sp-print-row">
+      <button class="sp-btn-print" (click)="printReceipt()">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print Receipt
+      </button>
+    </div>
+  </div>
+</div>
