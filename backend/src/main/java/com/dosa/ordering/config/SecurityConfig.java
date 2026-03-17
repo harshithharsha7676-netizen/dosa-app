@@ -33,6 +33,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST,    "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST,    "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET,     "/api/auth/check").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/menu").permitAll()
                 .requestMatchers(HttpMethod.GET,     "/api/menu/public/**").permitAll()
                 .requestMatchers(HttpMethod.POST,    "/api/orders/client").permitAll()
                 .requestMatchers(HttpMethod.GET,     "/api/orders/next-number").permitAll()
