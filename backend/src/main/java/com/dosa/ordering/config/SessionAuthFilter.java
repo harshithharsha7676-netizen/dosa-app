@@ -26,6 +26,7 @@ public class SessionAuthFilter extends OncePerRequestFilter {
 
         HttpSession session = request.getSession(false);
 
+        
         if (session != null && Boolean.TRUE.equals(session.getAttribute(SESSION_KEY))) {
             String username = (String) session.getAttribute("ADMIN_USERNAME");
 
