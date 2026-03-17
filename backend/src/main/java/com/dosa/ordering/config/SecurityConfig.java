@@ -30,19 +30,21 @@ public class SecurityConfig {
             .addFilterBefore(sessionAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
 
-                // ✅ PUBLIC APIs
-                .requestMatchers("/").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/menu/**").permitAll()
-                .requestMatchers("/api/orders/client").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/orders").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/orders/**").permitAll()
-                .requestMatchers("/api/orders/next-number").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/uploads/**").permitAll()
+            		  // ✅ PUBLIC APIs
+            	    .requestMatchers("/").permitAll()
+            	    .requestMatchers("/api/auth/**").permitAll()
+            	    .requestMatchers("/api/menu/**").permitAll()
+            	    .requestMatchers("/api/orders/client").permitAll()
 
-                // 🔒 PROTECTED
-                .anyRequest().authenticated()
+            	    // ✅ ALLOW ALL ORDER APIs (IMPORTANT FIX)
+            	    .requestMatchers("/api/orders/**").permitAll()
+
+            	    .requestMatchers("/api/orders/next-number").permitAll()
+            	    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            	    .requestMatchers("/uploads/**").permitAll()
+
+            	    // 🔒 PROTECTED
+            	    .anyRequest().authenticated()
             );
 
         return http.build();
